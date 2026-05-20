@@ -3,7 +3,7 @@ FROM node:20-alpine AS builder
 WORKDIR /app
 COPY package*.json ./
 COPY prisma ./prisma
-RUN npm ci
+RUN npm install
 COPY . .
 RUN npx prisma generate && npm run build
 
@@ -16,7 +16,7 @@ RUN apk add --no-cache openssl
 
 COPY --from=builder /app/package*.json ./
 COPY --from=builder /app/prisma ./prisma
-RUN npm ci --omit=dev && npx prisma generate
+RUN npm install --omit=dev && npx prisma generate
 
 COPY --from=builder /app/dist ./dist
 COPY scripts ./scripts
