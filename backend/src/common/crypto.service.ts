@@ -15,10 +15,13 @@ export class CryptoService {
   private readonly key: Buffer;
 
   constructor(config: ConfigService) {
-    const hex = config.getOrThrow<string>('PII_ENCRYPTION_KEY');
-    this.key = Buffer.from(hex, 'hex');
-    if (this.key.length !== 32) {
-      throw new Error('PII_ENCRYPTION_KEY must be 32 bytes (64 hex chars)');
+    const raw = config.getOrThrow<string>('PII_ENCRYPTION_KEY');
+// Accept either 64 hex chars (32 raw bytes) OR any string >=32 chars (derive via scrypt)
+if (/^[0-9a-fA-F]{64}$/.test(raw)) {
+  this.key = Buffer.from(raw, 'hex');
+} else {
+  this.key = scryptSync(raw, 'oxygen-pii-key-v1', 32);
+}
     }
   }
 
