@@ -2,26 +2,17 @@ import { Injectable } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import { createCipheriv, createDecipheriv, randomBytes, scryptSync } from 'crypto';
 
-/**
- * AES-256-GCM PII field encryption.
- * Output format: <ivHex>:<authTagHex>:<cipherHex>
- *
- * Use for fields like PAN, Aadhaar, account numbers stored at rest.
- * For larger blobs (images, statements) keep them in S3 with KMS-managed keys
- * and only encrypt the storage key with this service.
- */
 @Injectable()
 export class CryptoService {
   private readonly key: Buffer;
 
   constructor(config: ConfigService) {
     const raw = config.getOrThrow<string>('PII_ENCRYPTION_KEY');
-// Accept either 64 hex chars (32 raw bytes) OR any string >=32 chars (derive via scrypt)
-if (/^[0-9a-fA-F]{64}$/.test(raw)) {
-  this.key = Buffer.from(raw, 'hex');
-} else {
-  this.key = scryptSync(raw, 'oxygen-pii-key-v1', 32);
-}
+    // Accept either 64 hex chars (32 raw bytes) or any string >=32 chars (derive via scrypt)
+    if (/^[0-9a-fA-F]{64}$/.test(raw)) {
+      this.key = Buffer.from(raw, 'hex');
+    } else {
+      this.key = scryptSync(raw, 'oxygen-pii-key-v1', 32);
     }
   }
 
@@ -53,7 +44,6 @@ if (/^[0-9a-fA-F]{64}$/.test(raw)) {
     return JSON.parse(this.decrypt(payload)) as T;
   }
 
-  /** One-way hash for OTPs and refresh tokens; uses scrypt with random salt. */
   hash(value: string, saltHex?: string): string {
     const salt = saltHex ? Buffer.from(saltHex, 'hex') : randomBytes(16);
     const derived = scryptSync(value, salt, 32);
