@@ -1,4 +1,4 @@
-import { plainToInstance } from 'class-transformer';
+import { plainToInstance, Type } from 'class-transformer';
 import {
   IsEnum,
   IsNumber,
@@ -19,6 +19,7 @@ class EnvSchema {
   @IsEnum(NodeEnv)
   NODE_ENV: NodeEnv = NodeEnv.Development;
 
+  @Type(() => Number)
   @IsNumber()
   @Min(1)
   PORT = 3000;
@@ -44,13 +45,16 @@ class EnvSchema {
   @IsString()
   JWT_REFRESH_TTL = '7d';
 
+  // Accepts any string of >=32 chars; CryptoService derives a 32-byte key via scrypt
   @IsString()
-  @MinLength(64) // 32 bytes = 64 hex chars
+  @MinLength(32)
   PII_ENCRYPTION_KEY!: string;
 
+  @Type(() => Number)
   @IsNumber()
   OTP_TTL_SECONDS = 300;
 
+  @Type(() => Number)
   @IsNumber()
   OTP_MAX_ATTEMPTS = 3;
 
