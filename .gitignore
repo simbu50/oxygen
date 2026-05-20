@@ -1,0 +1,49 @@
+# Node
+node_modules/
+dist/
+build/
+coverage/
+*.log
+npm-debug.log*
+
+# Env
+.env
+.env.local
+.env.*.local
+!.env.example
+
+# Prisma
+backend/prisma/migrations/dev.db*
+
+# Flutter
+mobile/.dart_tool/
+mobile/.flutter-plugins
+mobile/.flutter-plugins-dependencies
+mobile/.packages
+mobile/.pub-cache/
+mobile/.pub/
+mobile/build/
+mobile/ios/Pods/
+mobile/ios/.symlinks/
+mobile/ios/Flutter/Generated.xcconfig
+mobile/ios/Runner/GeneratedPluginRegistrant.*
+mobile/android/.gradle/
+mobile/android/app/release/
+mobile/android/local.properties
+mobile/.idea/
+
+# IDE
+.vscode/
+.idea/
+*.swp
+.DS_Store
+
+# Vite / React
+admin-web/dist/
+admin-web/.vite/
+
+# Misc
+*.pid
+*.seed
+*.pid.lock
+.tsbuildinfo

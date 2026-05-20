@@ -1,0 +1,2 @@
+# SPA fallback for static hosts (Netlify, Vercel via vercel.json, Render static reads from render.yaml routes)
+/*    /index.html   200

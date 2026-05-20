@@ -1,0 +1,36 @@
+services:
+  postgres:
+    image: postgres:16-alpine
+    container_name: oxygen-postgres
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER: oxygen
+      POSTGRES_PASSWORD: oxygen
+      POSTGRES_DB: oxygen
+    ports:
+      - "5432:5432"
+    volumes:
+      - oxygen_pg_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U oxygen"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
+
+  redis:
+    image: redis:7-alpine
+    container_name: oxygen-redis
+    restart: unless-stopped
+    ports:
+      - "6379:6379"
+    volumes:
+      - oxygen_redis_data:/data
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
+
+volumes:
+  oxygen_pg_data:
+  oxygen_redis_data:

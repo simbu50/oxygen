@@ -1,0 +1,100 @@
+# Render Blueprint for OXYGEN MVP
+# Provisions backend (web service, Docker), admin static site, and Postgres in one shot.
+#
+# Usage:
+#   1. Push this repo to GitHub.
+#   2. In Render, click "New > Blueprint", point at this repo.
+#   3. Render reads this file and creates all three services.
+#
+# Free tier notes:
+#   - Render free Postgres expires after 90 days. For a permanent free DB,
+#     create a Neon (https://neon.tech) project, copy its DATABASE_URL,
+#     and paste it into the backend's env override on Render — then delete
+#     the `oxygen-db` block below.
+#   - Free web services sleep after 15 min idle (~30s cold start).
+
+services:
+  # ---------- Backend (NestJS, Docker) ----------
+  - type: web
+    name: oxygen-backend
+    runtime: docker
+    plan: free
+    region: singapore       # closest free region for India users
+    rootDir: backend
+    dockerfilePath: ./Dockerfile
+    dockerCommand: ./scripts/start-prod.sh
+    healthCheckPath: /health
+    autoDeploy: true
+    envVars:
+      - key: NODE_ENV
+        value: production
+      - key: PORT
+        value: 3000
+      - key: DATABASE_URL
+        fromDatabase:
+          name: oxygen-db
+          property: connectionString
+      - key: JWT_ACCESS_SECRET
+        generateValue: true
+      - key: JWT_REFRESH_SECRET
+        generateValue: true
+      - key: JWT_ACCESS_TTL
+        value: 15m
+      - key: JWT_REFRESH_TTL
+        value: 7d
+      - key: PII_ENCRYPTION_KEY
+        # Render's generateValue gives 32 random bytes hex-encoded — perfect for AES-256
+        generateValue: true
+      - key: OTP_TTL_SECONDS
+        value: 300
+      - key: OTP_MAX_ATTEMPTS
+        value: 3
+      - key: KYC_VENDOR
+        value: mock
+      - key: ADMIN_WEB_ORIGIN
+        # Filled in after admin static site is created — paste its URL here
+        # then redeploy. Or set via dashboard.
+        sync: false
+      # Demo dev-OTP. REMOVE this for a real launch — at that point integrate
+      # an SMS provider (MSG91/Gupshup) inside src/auth/otp.service.ts -> sendSms().
+      - key: OTP_DEV_FIXED
+        value: "123456"
+
+  # ---------- Admin web (React, static) ----------
+  - type: web
+    name: oxygen-admin
+    runtime: static
+    plan: free
+    rootDir: admin-web
+    buildCommand: npm ci && npm run build
+    staticPublishPath: ./dist
+    autoDeploy: true
+    envVars:
+      - key: VITE_API_BASE_URL
+        # Will resolve to the backend service URL automatically
+        fromService:
+          type: web
+          name: oxygen-backend
+          property: hostport      # e.g. https://oxygen-backend.onrender.com
+    routes:
+      # SPA fallback: every unknown route serves index.html
+      - type: rewrite
+        source: /*
+        destination: /index.html
+    headers:
+      - path: /*
+        name: X-Frame-Options
+        value: DENY
+      - path: /*
+        name: X-Content-Type-Options
+        value: nosniff
+      - path: /*
+        name: Referrer-Policy
+        value: strict-origin-when-cross-origin
+
+databases:
+  - name: oxygen-db
+    plan: free                # 1 GB, 90-day expiry on free tier
+    region: singapore
+    databaseName: oxygen
+    user: oxygen

@@ -1,0 +1,150 @@
+// Prisma schema for OXYGEN
+// Sprint 1+2 scope: users, admins, KYC, audit log, OTP
+
+generator client {
+  provider      = "prisma-client-js"
+  // native = local dev (whatever your machine is)
+  // linux-musl-openssl-3.0.x = Render / Fly / any Alpine-based container
+  binaryTargets = ["native", "linux-musl-openssl-3.0.x"]
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+enum KycStatus {
+  PENDING
+  PARTIAL
+  SUBMITTED
+  VERIFIED
+  REJECTED
+}
+
+enum KycDocumentType {
+  PAN
+  AADHAAR
+  SELFIE
+  BANK_STATEMENT
+  SALARY_SLIP
+}
+
+enum KycDocumentStatus {
+  PENDING
+  VERIFIED
+  REJECTED
+}
+
+enum AdminRole {
+  SUPER_ADMIN
+  KYC_OFFICER
+  CREDIT_OFFICER
+  COLLECTIONS
+  READ_ONLY
+}
+
+enum AuditActor {
+  USER
+  ADMIN
+  SYSTEM
+}
+
+model User {
+  id                String    @id @default(uuid())
+  phone             String    @unique
+  email             String?   @unique
+  firstName         String?
+  lastName          String?
+  dateOfBirth       DateTime?
+  isProfileComplete Boolean   @default(false)
+  kycStatus         KycStatus @default(PENDING)
+  isActive          Boolean   @default(true)
+  createdAt         DateTime  @default(now())
+  updatedAt         DateTime  @updatedAt
+
+  kycDocuments     KycDocument[]
+  refreshTokens    RefreshToken[]
+
+  @@index([kycStatus])
+  @@index([createdAt])
+}
+
+model Admin {
+  id           String    @id @default(uuid())
+  email        String    @unique
+  passwordHash String
+  fullName     String
+  role         AdminRole @default(KYC_OFFICER)
+  isActive     Boolean   @default(true)
+  lastLoginAt  DateTime?
+  createdAt    DateTime  @default(now())
+  updatedAt    DateTime  @updatedAt
+}
+
+model OtpRequest {
+  id          String   @id @default(uuid())
+  phone       String
+  otpHash     String
+  attempts    Int      @default(0)
+  isVerified  Boolean  @default(false)
+  expiresAt   DateTime
+  createdAt   DateTime @default(now())
+
+  @@index([phone, createdAt])
+}
+
+model RefreshToken {
+  id          String   @id @default(uuid())
+  userId      String?
+  adminId     String?
+  tokenHash   String   @unique
+  isRevoked   Boolean  @default(false)
+  expiresAt   DateTime
+  createdAt   DateTime @default(now())
+
+  user  User?  @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId])
+  @@index([adminId])
+}
+
+model KycDocument {
+  id           String            @id @default(uuid())
+  userId       String
+  type         KycDocumentType
+  status       KycDocumentStatus @default(PENDING)
+  // Encrypted PII payload (AES-256-GCM); shape varies by type.
+  // PAN:    { panNumber, nameAsPerPan }
+  // AADHAAR:{ aadhaarLast4, addressLine1, city, pincode }
+  // SELFIE: { storageKey }
+  encryptedPayload String
+  vendorRequestId  String?
+  vendorResponse   Json?
+  rejectionReason  String?
+  reviewedBy       String?
+  reviewedAt       DateTime?
+  createdAt        DateTime          @default(now())
+  updatedAt        DateTime          @updatedAt
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([userId, type])
+  @@index([status])
+}
+
+model AuditLog {
+  id         String     @id @default(uuid())
+  actor      AuditActor
+  actorId    String?
+  action     String
+  resource   String
+  resourceId String?
+  metadata   Json?
+  ip         String?
+  userAgent  String?
+  createdAt  DateTime   @default(now())
+
+  @@index([resource, resourceId])
+  @@index([actorId])
+  @@index([createdAt])
+}
