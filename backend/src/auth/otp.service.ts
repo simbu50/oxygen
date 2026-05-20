@@ -4,7 +4,7 @@ import { randomInt } from 'crypto';
 import { PrismaService } from '../database/prisma.service';
 import { CryptoService } from '../common/crypto.service';
 
-interface OtpIssueResult {
+export interface OtpIssueResult {
   requestId: string;
   expiresInSeconds: number;
 }
